@@ -33,6 +33,10 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.net.ConnectivityManager;
+import android.net.wifi.WifiConfiguration;
+import android.os.Handler;
+
 public class WifiManagerPlugin extends CordovaPlugin {
     private static final String ACCESS_COARSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
     private static final String ACCESS_FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
@@ -391,31 +395,56 @@ public class WifiManagerPlugin extends CordovaPlugin {
     }
 
     private boolean setWifiApEnabled(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        if (hasWriteSettingsPermission()) {
-            return setWifiApEnabledWithPermission(args, callbackContext);
-        } else {
-            synchronized(wifiApEnableCallbacks) {
-                if(hasWriteSettingsPermission()) {
-                    return setWifiApEnabledWithPermission(args, callbackContext);
-                }
+    try {
 
-                try {
-                    Class<?> klass = wifiManager.getClass();
-                    klass.getDeclaredMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
-                } catch(NoSuchMethodException e) {
-                    return false;
-                }
+        boolean enable = args.getBoolean(1);
 
-                wifiApEnableCallbacks.add(new CallbackClosure(args, callbackContext));
+        Context context = cordova.getActivity().getApplicationContext();
 
-                if(wifiApEnableCallbacks.size() == 1) {
-                    Intent intent = new Intent(ACTION_MANAGE_WRITE_SETTINGS);
-                    cordova.startActivityForResult(this, intent, REQUEST_CODE_WIFI_AP_ENABLE);
-                }
+        WifiManager wifiManager =
+            (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
 
-                return true;
-            }
+        // Try modern tethering API first (better for Samsung)
+        try {
+
+            ConnectivityManager cm =
+                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+            Method startTethering = cm.getClass().getDeclaredMethod(
+                    "startTethering",
+                    int.class,
+                    boolean.class,
+                    ConnectivityManager.OnStartTetheringCallback.class,
+                    Handler.class
+            );
+
+            startTethering.setAccessible(true);
+            startTethering.invoke(cm, 0, false, null, null);
+
+            callbackContext.success("Hotspot enabled using tethering API");
+            return;
+
+        } catch (Exception e) {
+            // fallback to legacy
         }
+
+        // Legacy method fallback
+        Method method = wifiManager.getClass().getDeclaredMethod(
+                "setWifiApEnabled",
+                WifiConfiguration.class,
+                boolean.class
+        );
+
+        method.setAccessible(true);
+        method.invoke(wifiManager, null, enable);
+
+        callbackContext.success("Hotspot toggled using legacy API");
+
+    } catch (Exception e) {
+
+        callbackContext.error("Hotspot error: " + e.getMessage());
+
+    }        
     }
 
     private boolean setWifiApEnabledWithPermission(JSONArray args, CallbackContext callbackContext) throws JSONException {
