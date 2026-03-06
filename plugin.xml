@@ -25,10 +25,30 @@
     </config-file>
 
     <config-file target="AndroidManifest.xml" parent="/manifest">
-      <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-      <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-      <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-      <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+        <!-- WiFi permissions -->
+        <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+        <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+
+        <!-- Network -->
+        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+        <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+
+        <!-- Internet -->
+        <uses-permission android:name="android.permission.INTERNET" />
+
+        <!-- Location (required for WiFi scanning Android 6+) -->
+        <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+        <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+        <!-- Android 13+ -->
+        <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+            android:usesPermissionFlags="neverForLocation" />
+
+        <!-- Multicast -->
+        <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
+        <!-- Optional -->
+        <uses-permission android:name="android.permission.WAKE_LOCK" />
     </config-file>
 
     <source-file src="src/dk/kapetanovic/wifimanager/WifiManagerPlugin.java" target-dir="src/dk/kapetanovic/wifimanager" />
